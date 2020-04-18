@@ -15,9 +15,9 @@ On this project works, as collaborators, **Federico Rodigari** and **Francesco Z
   - [Updated Network map](#updated-network-map)
 - [Code](#code)
   - [Vagrantfile](#vagrantfile)
-  - [ROUTERS](#routers)
-  - [SWITCH](#switch)
-  - [HOSTS](#hosts)
+  - [Routers](#routers)
+  - [Switch](#switch)
+  - [Hosts](#hosts)
 - [Tests](#tests)
   - [Routing table](#routing-table)
   - [Reachability](#reachability)
@@ -97,9 +97,9 @@ The 4 networks are:
 We used IPs starting from 192.168.2.0 as it was simpler for our design.
 
 To assign IP adresses to the VMs we had to follow the requirements, that say:
-- *"A"* contains "host-a" and must be able to scale up to 380 usable addresses
-- *"B"* contains "host-b" and must be able to scale up to 50 usable addresses
-- *"C"* contains "host-c" must be able to scale up to 406 usable addresses
+- *"A"* contains *"host-a"* and must be able to scale up to 380 usable addresses
+- *"B"* contains *"host-b"* and must be able to scale up to 50 usable addresses
+- *"C"* contains *"host-c"* must be able to scale up to 406 usable addresses
 
 | Subnet |   Address    | Netmask | Hosts needed | Hosts available |
 | :----- | :----------: | :-----: | :----------: | :-------------: |
@@ -112,7 +112,7 @@ In order to calculate how many hosts will be allowed on each subnet we used this
 ```
 Number of available IPs for network = ((2^h)-2)
 ```
-The h represents the number of zeros in the subnet mask, if the subnet mask were converted to binary. The first and last addresses are reserved: the first to identify the network and the last to be used as the broadcast address. This is the reason why there is "-2" in the previous formula.
+The *"h"* represents the number of zeros in the subnet mask, if the subnet mask were converted to binary. The first and last addresses are reserved: the first to identify the network and the last to be used as the broadcast address. This is the reason why there is "-2" in the previous formula.
 
 ## VLAN
 
@@ -188,12 +188,12 @@ In this section, we will describe the code that allowed us to build our project 
 
 ![Error_Memory](images/error_memory.png)
  
- to solve this issue we had to increase the amount of memory allocated for *host-c* in order to make the docker work
+To solve this issue we had to increase the amount of memory allocated for *host-c* in order to make the docker work
 ```
 74  vb.memory = 512
 ```
 
-## ROUTERS
+## Routers
 ```
 #CONFIGURATIONS
 
@@ -218,7 +218,7 @@ ip route del default #Delete the default gateway
   1. Set interface of the subnet *D* 192.168.10.2/30 and of the subnet *C* 192.168.6.1
   2. Subnet A and B reachable from 192.168.10.1 *(Router-1)*
   
-## SWITCH
+## Switch
 ```
 #CONFIGURATIONS
 
@@ -242,7 +242,7 @@ ovs-vsctl add-port switch enp0s10 tag=10
 ip link set enp0s10 up
 ```
 
-## HOSTS
+## Hosts
 ```
 #COMMON
 export DEBIAN_FRONTEND=noninteractive
@@ -259,18 +259,18 @@ ip route del default #Delete the default gateway
 # 3 Set default gateways
 ```
 - **host-a**
+  1. NOT PRESENT
   2. Set interface of the subnet *A* to 192.168.2.1/23
   3. Set default gateway to 192.168.2.1
 - **host-b**
+  1. NOT PRESENT
   2. Set interface of the subnet *B* 192.168.4.1/24
   3. Set default gateway to 192.168.4.1
 - **host-c**
-  1. Docker and curl installation 
-    - docker run image "dustnic82/ngix-test"
+  1. Docker and curl installation and docker run image "dustnic82/ngix-test"
   2. Set interface of the subnet *C* to 192.168.6.1/24
   3. Subnet *A* and *B* reachable via 192.168.6.1 (Router-2)
-
-
+   
 # Tests
 In this section we will describe some commands that we used to check if our project was correct. In particular we checked the route, the reachability of the hosts and the correct functioning of the WebServer.
 
@@ -278,7 +278,7 @@ In this section we will describe some commands that we used to check if our proj
 We were able to display the routing tables of the components of the network via the command ```route -nve```.
 This can help to show route information about directly connected and remote networks.
 
-**HOST A**
+- **host-a**
 | Destination |   Gateway   |     Genmask     |  Iface |
 | :---------- | :---------: | :-------------: | -----: |
 | 0.0.0.0     | 192.168.2.1 |     0.0.0.0     | enp0s8 |
@@ -286,7 +286,7 @@ This can help to show route information about directly connected and remote netw
 | 10.0.2.2    |   0.0.0.0   | 255.255.255.255 | enp0s3 |
 | 192.168.2.0 |   0.0.0.0   |  255.255.254.0  | enp0s8 |
 
-**HOST B**
+- **host-b**
 | Destination |   Gateway   |     Genmask     |  Iface |
 | :---------- | :---------: | :-------------: | -----: |
 | 0.0.0.0     | 192.168.4.1 |     0.0.0.0     | enp0s8 |
@@ -294,7 +294,7 @@ This can help to show route information about directly connected and remote netw
 | 10.0.2.2    |   0.0.0.0   | 255.255.255.255 | enp0s3 |
 | 192.168.4.0 |   0.0.0.0   |  255.255.255.0  | enp0s8 |
 
-**HOST C**
+- **host-c**
 | Destination |   Gateway   |     Genmask     |   Iface |
 | :---------- | :---------: | :-------------: | ------: |
 | 0.0.0.0     |  10.0.2.2   |     0.0.0.0     |  enp0s3 |
@@ -305,7 +305,7 @@ This can help to show route information about directly connected and remote netw
 | 192.168.4.0 | 192.168.6.1 |  255.255.255.0  |  enp0s8 |
 | 192.168.6.0 |   0.0.0.0   |  255.255.254.0  |  enp0s8 |
 
-**ROUTER 1**
+- **router-1**
 | Destination  |   Gateway    |     Genmask     |     Iface |
 | :----------- | :----------: | :-------------: | --------: |
 | 10.0.2.0     |   0.0.0.0    |  255.255.255.0  |    enp0s3 |
@@ -315,7 +315,7 @@ This can help to show route information about directly connected and remote netw
 | 192.168.6.0  | 192.168.10.2 |  255.255.254.0  |    enp0s9 |
 | 192.168.10.0 |   0.0.0.0    | 255.255.255.252 |    enp0s9 |
 
-**ROUTER 2**
+- **router-2**
 | Destination  |   Gateway    |     Genmask     |  Iface |
 | :----------- | :----------: | :-------------: | -----: |
 | 10.0.2.0     |   0.0.0.0    |  255.255.255.0  | enp0s3 |

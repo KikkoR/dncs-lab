@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>DNCS-LAB ASSIGNMENT FOR A.Y. 2019/20</title>
+        
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/markdown.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/highlight.css">
+        
+        <style>
+.task-list-item { list-style-type: none; } .task-list-item-checkbox { margin-left: -20px; vertical-align: middle; }
+</style>
+        <style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI', 'Ubuntu', 'Droid Sans', sans-serif;
+                font-size: 14px;
+                line-height: 1.6;
+            }
+        </style>
+        
+        
+    </head>
+    <body class="vscode-light">
+        <h1 id="dncs-lab-assignment-for-ay-201920">DNCS-LAB ASSIGNMENT FOR A.Y. 2019/20</h1>
+<p>On this project works, as collaborators, <strong>Federico Rodigari</strong> and <strong>Francesco Zoccatelli</strong> for the course of <em>&quot;Design of Networks and Communication Systems&quot;</em> hosted in UniTN.</p>
+<h2 id="table-of-contents">Table of contents:</h2>
+<ul>
+<li><a href="#dncs-lab-assignment-for-ay-201920">DNCS-LAB ASSIGNMENT FOR A.Y. 2019/20</a>
+<ul>
+<li><a href="#table-of-contents">Table of contents:</a></li>
+</ul>
+</li>
+<li><a href="#requirements">Requirements</a>
+<ul>
+<li><a href="#design-requirements">Design Requirements</a></li>
+<li><a href="#network-map">Network map</a></li>
+</ul>
+</li>
+<li><a href="#our-approach-to-the-project">Our approach to the project</a>
+<ul>
+<li><a href="#ip-adresses">IP Adresses</a></li>
+<li><a href="#vlan">VLAN</a></li>
+<li><a href="#updated-network-map">Updated Network map</a></li>
+</ul>
+</li>
+<li><a href="#code">Code</a>
+<ul>
+<li><a href="#vagrantfile">Vagrantfile</a></li>
+<li><a href="#routers">ROUTERS</a></li>
+<li><a href="#switch">SWITCH</a></li>
+<li><a href="#hosts">HOSTS</a></li>
+</ul>
+</li>
+<li><a href="#tests">Tests</a>
+<ul>
+<li><a href="#routing-table">Routing table</a></li>
+<li><a href="#reachability">Reachability</a></li>
+<li><a href="#webserver">WebServer</a></li>
+</ul>
+</li>
+<li><a href="#authors-and-acknowledgment">Authors and acknowledgment</a></li>
+</ul>
+<h1 id="requirements">Requirements</h1>
+<ul>
+<li>Python 3</li>
+<li>10GB disk storage</li>
+<li>2GB free RAM</li>
+<li>Virtualbox</li>
+<li>Vagrant (<a href="https://www.vagrantup.com">https://www.vagrantup.com</a>)</li>
+<li>Internet</li>
+</ul>
+<h2 id="design-requirements">Design Requirements</h2>
+<ul>
+<li>Hosts 1-a and 1-b are in two subnets (<em>Hosts-A</em> and <em>Hosts-B</em>) that must be able to scale up to respectively 380 and 50 usable addresses</li>
+<li>Host 2-c is in a subnet (<em>Hub</em>) that needs to accommodate up to 406 usable addresses</li>
+<li>Host 2-c must run a docker image (dustnic82/nginx-test) which implements a web-server that must be reachable from Host-1-a and Host-1-b</li>
+<li>No dynamic routing can be used</li>
+<li>Routes must be as generic as possible</li>
+<li>The lab setup must be portable and executed just by launching the <code>vagrant up</code> command</li>
+</ul>
+<h2 id="network-map">Network map</h2>
+<pre><code><code><div>        +-----------------------------------------------------+
+        |                                                     |
+        |                                                     |eth0
+        +--+--+                +------------+             +------------+
+        |     |                |            |             |            |
+        |     |            eth0|            |eth2     eth2|            |
+        |     +----------------+  router-1  +-------------+  router-2  |
+        |     |                |            |             |            |
+        |     |                |            |             |            |
+        |  M  |                +------------+             +------------+
+        |  A  |                      |eth1                       |eth1
+        |  N  |                      |                           |
+        |  A  |                      |                           |
+        |  G  |                      |                     +-----+----+
+        |  E  |                      |eth1                 |          |
+        |  M  |            +-------------------+           |          |
+        |  E  |        eth0|                   |           |  host-c  |
+        |  N  +------------+      SWITCH       |           |          |
+        |  T  |            |                   |           |          |
+        |     |            +-------------------+           +----------+
+        |  V  |               |eth2         |eth3                |eth0
+        |  A  |               |             |                    |
+        |  G  |               |             |                    |
+        |  R  |               |eth1         |eth1                |
+        |  A  |        +----------+     +----------+             |
+        |  N  |        |          |     |          |             |
+        |  T  |    eth0|          |     |          |             |
+        |     +--------+  host-a  |     |  host-b  |             |
+        |     |        |          |     |          |             |
+        |     |        |          |     |          |             |
+        ++-+--+        +----------+     +----------+             |
+        | |                              |eth0                   |
+        | |                              |                       |
+        | +------------------------------+                       |
+        |                                                        |
+        |                                                        |
+        +--------------------------------------------------------+
+
+</div></code></code></pre>
+<h1 id="our-approach-to-the-project">Our approach to the project</h1>
+<p>We decide to divide our network in 4 sub-networks, with 2 of these that are VLAN based (to &quot;split&quot; the switch into two virtual switches).</p>
+<p>The 4 networks are:</p>
+<ul>
+<li><em>&quot;A&quot;</em>: this subnet contains <strong>&quot;host-a&quot;</strong>, other <strong>378 hosts</strong> and the <strong>router-1 port (enp0s8.9)</strong></li>
+<li><em>&quot;B&quot;</em>: this subnet contains <strong>&quot;host-b&quot;</strong>, other <strong>48 hosts</strong> and the <strong>router-2 port (enp0s8.10)</strong></li>
+<li><em>&quot;C&quot;</em>: this subnet contains <strong>&quot;host-c&quot;</strong>, other <strong>404 hosts</strong> and the <strong>router-2 port (enp0s8)</strong></li>
+<li><em>&quot;D&quot;</em>: this subnet contains the 2 ports left on both routers (enp0s9 on both)</li>
+</ul>
+<h2 id="ip-adresses">IP Adresses</h2>
+<p>We used IPs starting from 192.168.2.0 as it was simpler for our design.</p>
+<p>To assign IP adresses to the VMs we had to follow the requirements, that say:</p>
+<ul>
+<li><em>&quot;A&quot;</em> contains <em>&quot;host-a&quot;</em> and must be able to scale up to 380 usable addresses</li>
+<li><em>&quot;B&quot;</em> contains <em>&quot;host-b&quot;</em> and must be able to scale up to 50 usable addresses</li>
+<li><em>&quot;C&quot;</em> contains <em>&quot;host-c&quot;</em> must be able to scale up to 406 usable addresses</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Subnet</th>
+<th style="text-align:center">Address</th>
+<th style="text-align:center">Netmask</th>
+<th style="text-align:center">Hosts needed</th>
+<th style="text-align:center">Hosts available</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left"><em>A</em></td>
+<td style="text-align:center">192.168.2.0</td>
+<td style="text-align:center">/23</td>
+<td style="text-align:center">380</td>
+<td style="text-align:center">510</td>
+</tr>
+<tr>
+<td style="text-align:left"><em>B</em></td>
+<td style="text-align:center">192.168.4.0</td>
+<td style="text-align:center">/24</td>
+<td style="text-align:center">50</td>
+<td style="text-align:center">254</td>
+</tr>
+<tr>
+<td style="text-align:left"><em>C</em></td>
+<td style="text-align:center">192.168.6.0</td>
+<td style="text-align:center">/23</td>
+<td style="text-align:center">406</td>
+<td style="text-align:center">510</td>
+</tr>
+<tr>
+<td style="text-align:left"><em>D</em></td>
+<td style="text-align:center">192.168.10.0</td>
+<td style="text-align:center">/30</td>
+<td style="text-align:center">2</td>
+<td style="text-align:center">2</td>
+</tr>
+</tbody>
+</table>
+<p>In order to calculate how many hosts will be allowed on each subnet we used this formula:</p>
+<pre><code><code><div>Number of available IPs for network = ((2^h)-2)
+</div></code></code></pre>
+<p>The <em>&quot;h&quot;</em> represents the number of zeros in the subnet mask, if the subnet mask were converted to binary. The first and last addresses are reserved: the first to identify the network and the last to be used as the broadcast address. This is the reason why there is &quot;-2&quot; in the previous formula.</p>
+<h2 id="vlan">VLAN</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align:right">Subnet</th>
+<th style="text-align:center">Interface</th>
+<th style="text-align:center">Vlan tag</th>
+<th style="text-align:right">IP</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:right"><em>A</em></td>
+<td style="text-align:center">enp0s8.9</td>
+<td style="text-align:center">9</td>
+<td style="text-align:right">192.168.2.1</td>
+</tr>
+<tr>
+<td style="text-align:right"><em>B</em></td>
+<td style="text-align:center">enp0s8.10</td>
+<td style="text-align:center">10</td>
+<td style="text-align:right">192.168.4.1</td>
+</tr>
+</tbody>
+</table>
+<p>We decided to use vlans for the networks &quot;<em>A</em>&quot; and &quot;<em>B</em>&quot;, so we can split the switch in two virtual switches.</p>
+<ul>
+<li>SWITCH: split in two VLAN: &quot;VLAN 9&quot; and &quot;VLAN 10&quot;</li>
+<li>ROUTER-1: create a link between router-1 and VLANs in trunk mode</li>
+</ul>
+<h2 id="updated-network-map">Updated Network map</h2>
+<pre><code><code><div>
+
+        +----------------------------------------------------------+
+        |                         192.168.10.1/30   192.168.10.2/30|
+        |                                                          |enp0s3
+        +--+--+                +------------+  ^          ^   +------------+
+        |     |                |            |  |          |   |            |
+        |     |          enp0s3|            |  \  enp0s9  /   |            |
+        |     +----------------+  router-1  +-----------------+  router-2  |
+        |     |                |            |                 |            |
+        |     |                |            |                 |            |
+        |  M  |                +------------+                 +------------+
+        |  A  |      192.168.2.1/23  |  enp0s8.9             enp0s8 | 192.168.6.1/23
+        |  N  |      192.168.4.1/24  |  enp0s8.10                   |
+        |  A  |                      |                       enp0s8 | 192.168.6.2/23
+        |  G  |                      |                        +-----+----+
+        |  E  |                      |  enp0s8                |          |
+        |  M  |            +----------------------+           |          |
+        |  E  |      enp0s3|                      |           |  host-c  |
+        |  N  +------------+        SWITCH        |           |          |
+        |  T  |            |  9               10  |           |          |
+        |     |            +----------------------+           +----------+
+        |  V  |        enp0s9 |                | enp0s10            |enp0s3
+        |  A  |               |                |                    |
+        |  G  | 192.168.2.2/23|                |192.168.4.2/24      |
+        |  R  |         enp0s8|                |enp0s8              |
+        |  A  |        +----------+     +----------+                |
+        |  N  |        |          |     |          |                |
+        |  T  |  enp0s3|          |     |          |                |
+        |     +--------+  host-a  |     |  host-b  |                |
+        |     |        |          |     |          |                |
+        |     |        |          |     |          |                |
+        +-+---+        +----------+     +----------+                |
+        | |                              |enp0s3                    |
+        | |                              |                          |
+        | +------------------------------+                          |
+        |                                                           |
+        |                                                           |
+        +-----------------------------------------------------------+
+
+
+
+</div></code></code></pre>
+<h1 id="code">Code</h1>
+<p>In this section, we will describe the code that allowed us to build our project as well as the changes we made on the code that we pulled form the following GitHub repository <a href="https://github.com/dustnic/dncs-lab">dustnic/dncs-lab</a></p>
+<h2 id="vagrantfile">Vagrantfile</h2>
+<ul>
+<li>Firstly, we changed the path of the <em>.sh</em> file for every VM, linking the correct configuration file for every machine</li>
+</ul>
+<pre><code><code><div>24  router1.vm.provision &quot;shell&quot;, path: &quot;router-1.sh&quot;
+</div></code></code></pre>
+<ul>
+<li>Secondly we had to make some more changes due to the following error:</li>
+</ul>
+<p><img src="file:////Users/kikkosmac/Desktop/dncs-lab/images/error_memory.png" alt="Error_Memory"></p>
+<p>To solve this issue we had to increase the amount of memory allocated for <em>host-c</em> in order to make the docker work</p>
+<pre><code><code><div>74  vb.memory = 512
+</div></code></code></pre>
+<h2 id="routers">ROUTERS</h2>
+<pre><code><code><div>#CONFIGURATIONS
+
+export DEBIAN_FRONTEND=noninteractive
+sudo su
+apt-get update
+apt-get install -y tcpdump --assume-yes
+sysctl net.ipv4.ip_forward=1
+
+# 1 ip add and ip link operations 
+# 2 (only for router 1) vlan subinterface creation
+
+ip route del default #Delete the default gateway
+
+# 3 Static routes creation
+</div></code></code></pre>
+<ul>
+<li><strong>router-1</strong>
+<ol>
+<li>Set interface of the subnet <em>D</em> 192.168.10.1/30</li>
+<li>Create subinterface for Vlan 9 and Vlan 10</li>
+<li>Subnet C reachable from 192.168.10.2 <em>(Router-2)</em></li>
+</ol>
+</li>
+<li><strong>router-2</strong>
+<ol>
+<li>Set interface of the subnet <em>D</em> 192.168.10.2/30 and of the subnet <em>C</em> 192.168.6.1</li>
+<li>Subnet A and B reachable from 192.168.10.1 <em>(Router-1)</em></li>
+</ol>
+</li>
+</ul>
+<h2 id="switch">SWITCH</h2>
+<pre><code><code><div>#CONFIGURATIONS
+
+export DEBIAN_FRONTEND=noninteractive
+sudo su
+apt-get update
+apt-get install -y tcpdump
+apt-get install -y openvswitch-common openvswitch-switch apt-transport-https ca-certificates curl software-properties-common
+
+# 1 Create a new bridge &quot;switch&quot;
+ovs-vsctl add-br switch
+
+#2 Create a trunk port and set interface up
+ovs-vsctl add-port switch enp0s8
+ip link set enp0s8 up
+
+#3 Add port on the switch with tag 9 and 10
+ovs-vsctl add-port switch enp0s9 tag=9
+ip link set enp0s9 up
+ovs-vsctl add-port switch enp0s10 tag=10
+ip link set enp0s10 up
+</div></code></code></pre>
+<h2 id="hosts">HOSTS</h2>
+<pre><code><code><div>#COMMON
+export DEBIAN_FRONTEND=noninteractive
+sudo su
+apt-get update
+apt-get install -y tcpdump --assume-yes
+
+#1 (only for host c) docker settings
+
+#2 ip add and ip link operations 
+
+ip route del default #Delete the default gateway
+
+# 3 Set default gateways
+</div></code></code></pre>
+<ul>
+<li><strong>host-a</strong>
+<ol>
+<li>NOT PRESENT</li>
+<li>Set interface of the subnet <em>A</em> to 192.168.2.1/23</li>
+<li>Set default gateway to 192.168.2.1</li>
+</ol>
+</li>
+<li><strong>host-b</strong>
+<ol>
+<li>NOT PRESENT</li>
+<li>Set interface of the subnet <em>B</em> 192.168.4.1/24</li>
+<li>Set default gateway to 192.168.4.1</li>
+</ol>
+</li>
+<li><strong>host-c</strong>
+<ol>
+<li>Docker and curl installation and docker run image &quot;dustnic82/ngix-test&quot;</li>
+<li>Set interface of the subnet <em>C</em> to 192.168.6.1/24</li>
+<li>Subnet <em>A</em> and <em>B</em> reachable via 192.168.6.1 (Router-2)</li>
+</ol>
+</li>
+</ul>
+<h1 id="tests">Tests</h1>
+<p>In this section we will describe some commands that we used to check if our project was correct. In particular we checked the route, the reachability of the hosts and the correct functioning of the WebServer.</p>
+<h2 id="routing-table">Routing table</h2>
+<p>We were able to display the routing tables of the components of the network via the command <code>route -nve</code>.
+This can help to show route information about directly connected and remote networks.</p>
+<p><strong>host-a</strong></p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Destination</th>
+<th style="text-align:center">Gateway</th>
+<th style="text-align:center">Genmask</th>
+<th style="text-align:right">Iface</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">0.0.0.0</td>
+<td style="text-align:center">192.168.2.1</td>
+<td style="text-align:center">0.0.0.0</td>
+<td style="text-align:right">enp0s8</td>
+</tr>
+<tr>
+<td style="text-align:left">10.0.2.0</td>
+<td style="text-align:center">0.0.0.0</td>
+<td style="text-align:center">255.255.255.0</td>
+<td style="text-align:right">enp0s3</td>
+</tr>
+<tr>
+<td style="text-align:left">10.0.2.2</td>
+<td style="text-align:center">0.0.0.0</td>
+<td style="text-align:center">255.255.255.255</td>
+<td style="text-align:right">enp0s3</td>
+</tr>
+<tr>
+<td style="text-align:left">192.168.2.0</td>
+<td style="text-align:center">0.0.0.0</td>
+<td style="text-align:center">255.255.254.0</td>
+<td style="text-align:right">enp0s8</td>
+</tr>
+</tbody>
+</table>
+<p><strong>host-b</strong></p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Destination</th>
+<th style="text-align:center">Gateway</th>
+<th style="text-align:center">Genmask</th>
+<th style="text-align:right">Iface</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">0.0.0.0</td>
+<td style="text-align:center">192.168.4.1</td>
+<td style="text-align:center">0.0.0.0</td>
+<td style="text-align:right">enp0s8</td>
+</tr>
+<tr>
+<td style="text-align:left">10.0.2.0</td>
+<td style="text-align:center">0.0.0.0</td>
+<td style="text-align:center">255.255.255.0</td>
+<td style="text-align:right">enp0s3</td>
+</tr>
+<tr>
+<td style="text-align:left">10.0.2.2</td>
+<td style="text-align:center">0.0.0.0</td>
+<td style="text-align:center">255.255.255.255</td>
+<td style="text-align:right">enp0s3</td>
+</tr>
+<tr>
+<td style="text-align:left">192.168.4.0</td>
+<td style="text-align:center">0.0.0.0</td>
+<td style="text-align:center">255.255.255.0</td>
+<td style="text-align:right">enp0s8</td>
+</tr>
+</tbody>
+</table>
+<p><strong>host-c</strong></p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Destination</th>
+<th style="text-align:center">Gateway</th>
+<th style="text-align:center">Genmask</th>
+<th style="text-align:right">Iface</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">0.0.0.0</td>
+<td style="text-align:center">10.0.2.2</td>
+<td style="text-align:center">0.0.0.0</td>
+<td style="text-align:right">enp0s3</td>
+</tr>
+<tr>
+<td style="text-align:left">10.0.2.0</td>
+<td style="text-align:center">0.0.0.0</td>
+<td style="text-align:center">255.255.255.0</td>
+<td style="text-align:right">enp0s3</td>
+</tr>
+<tr>
+<td style="text-align:left">10.0.2.2</td>
+<td style="text-align:center">0.0.0.0</td>
+<td style="text-align:center">255.255.255.255</td>
+<td style="text-align:right">enp0s3</td>
+</tr>
+<tr>
+<td style="text-align:left">172.17.0.0</td>
+<td style="text-align:center">0.0.0.0</td>
+<td style="text-align:center">255.255.0.0</td>
+<td style="text-align:right">docker0</td>
+</tr>
+<tr>
+<td style="text-align:left">192.168.2.0</td>
+<td style="text-align:center">192.168.6.1</td>
+<td style="text-align:center">255.255.254.0</td>
+<td style="text-align:right">enp0s8</td>
+</tr>
+<tr>
+<td style="text-align:left">192.168.4.0</td>
+<td style="text-align:center">192.168.6.1</td>
+<td style="text-align:center">255.255.255.0</td>
+<td style="text-align:right">enp0s8</td>
+</tr>
+<tr>
+<td style="text-align:left">192.168.6.0</td>
+<td style="text-align:center">0.0.0.0</td>
+<td style="text-align:center">255.255.254.0</td>
+<td style="text-align:right">enp0s8</td>
+</tr>
+</tbody>
+</table>
+<p><strong>router-1</strong></p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Destination</th>
+<th style="text-align:center">Gateway</th>
+<th style="text-align:center">Genmask</th>
+<th style="text-align:right">Iface</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">10.0.2.0</td>
+<td style="text-align:center">0.0.0.0</td>
+<td style="text-align:center">255.255.255.0</td>
+<td style="text-align:right">enp0s3</td>
+</tr>
+<tr>
+<td style="text-align:left">10.0.2.2</td>
+<td style="text-align:center">0.0.0.0</td>
+<td style="text-align:center">255.255.255.255</td>
+<td style="text-align:right">enp0s3</td>
+</tr>
+<tr>
+<td style="text-align:left">192.168.2.0</td>
+<td style="text-align:center">0.0.0.0</td>
+<td style="text-align:center">255.255.254.0</td>
+<td style="text-align:right">enp0s8.9</td>
+</tr>
+<tr>
+<td style="text-align:left">192.168.4.0</td>
+<td style="text-align:center">0.0.0.0</td>
+<td style="text-align:center">255.255.255.0</td>
+<td style="text-align:right">enp0s8.10</td>
+</tr>
+<tr>
+<td style="text-align:left">192.168.6.0</td>
+<td style="text-align:center">192.168.10.2</td>
+<td style="text-align:center">255.255.254.0</td>
+<td style="text-align:right">enp0s9</td>
+</tr>
+<tr>
+<td style="text-align:left">192.168.10.0</td>
+<td style="text-align:center">0.0.0.0</td>
+<td style="text-align:center">255.255.255.252</td>
+<td style="text-align:right">enp0s9</td>
+</tr>
+</tbody>
+</table>
+<p><strong>router-2</strong></p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Destination</th>
+<th style="text-align:center">Gateway</th>
+<th style="text-align:center">Genmask</th>
+<th style="text-align:right">Iface</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">10.0.2.0</td>
+<td style="text-align:center">0.0.0.0</td>
+<td style="text-align:center">255.255.255.0</td>
+<td style="text-align:right">enp0s3</td>
+</tr>
+<tr>
+<td style="text-align:left">10.0.2.2</td>
+<td style="text-align:center">0.0.0.0</td>
+<td style="text-align:center">255.255.255.255</td>
+<td style="text-align:right">enp0s3</td>
+</tr>
+<tr>
+<td style="text-align:left">192.168.2.0</td>
+<td style="text-align:center">192.168.10.1</td>
+<td style="text-align:center">255.255.254.0</td>
+<td style="text-align:right">enp0s9</td>
+</tr>
+<tr>
+<td style="text-align:left">192.168.4.0</td>
+<td style="text-align:center">192.168.10.1</td>
+<td style="text-align:center">255.255.255.0</td>
+<td style="text-align:right">enp0s9</td>
+</tr>
+<tr>
+<td style="text-align:left">192.168.4.0</td>
+<td style="text-align:center">0.0.0.0</td>
+<td style="text-align:center">255.255.252.0</td>
+<td style="text-align:right">enp0s8</td>
+</tr>
+<tr>
+<td style="text-align:left">192.168.10.0</td>
+<td style="text-align:center">0.0.0.0</td>
+<td style="text-align:center">255.255.255.252</td>
+<td style="text-align:right">enp0s9</td>
+</tr>
+</tbody>
+</table>
+<h2 id="reachability">Reachability</h2>
+<p>To see if the host were reachable we used &quot;ping [ip adress]&quot;.
+Ping is a network tool to test whether a particular host is reachable across an IP network.
+Through this command we checked that the hosts a, b and c were reachable.
+For example we tried to ping <em>host-c</em> from <em>host-a</em> due to the commands <code>vargrant ssh host-a</code> and <code>ping 192.168.6.2</code>.
+These are the results:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:right">bytes</th>
+<th style="text-align:center">from</th>
+<th style="text-align:center">icmp_seq</th>
+<th style="text-align:center">ttl</th>
+<th style="text-align:left">time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:right">64</td>
+<td style="text-align:center">192.168.6.2</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">62</td>
+<td style="text-align:left">1.63 ms</td>
+</tr>
+<tr>
+<td style="text-align:right">64</td>
+<td style="text-align:center">192.168.6.2</td>
+<td style="text-align:center">2</td>
+<td style="text-align:center">62</td>
+<td style="text-align:left">1.57 ms</td>
+</tr>
+<tr>
+<td style="text-align:right">64</td>
+<td style="text-align:center">192.168.6.2</td>
+<td style="text-align:center">3</td>
+<td style="text-align:center">62</td>
+<td style="text-align:left">1.78 ms</td>
+</tr>
+<tr>
+<td style="text-align:right">64</td>
+<td style="text-align:center">192.168.6.2</td>
+<td style="text-align:center">4</td>
+<td style="text-align:center">62</td>
+<td style="text-align:left">1.52 ms</td>
+</tr>
+<tr>
+<td style="text-align:right">64</td>
+<td style="text-align:center">192.168.6.2</td>
+<td style="text-align:center">5</td>
+<td style="text-align:center">62</td>
+<td style="text-align:left">1.65 ms</td>
+</tr>
+</tbody>
+</table>
+<pre><code><code><div>5 packets transmitted, 5 received, 0% packet loss, time 4004ms
+rtt min/avg/max/mdev = 1.527/1.635/1.786/0.097 ms
+</div></code></code></pre>
+<h2 id="webserver">WebServer</h2>
+<p>In order to check if the docker were succesfully installed we used the command <code>curl</code> that is a command line tool to transfer data to or from a server.
+In our case we used <code>curl 192.168.6.2</code> from <em>host-a</em> in order to get response from the docker that is &quot;hosted&quot; on <em>host-c</em></p>
+<pre><code><code><div>&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+&lt;title&gt;Welcome to nginx!&lt;/title&gt;
+&lt;style&gt;
+    body {
+        width: 35em;
+        margin: 0 auto;
+        font-family: Tahoma, Verdana, Arial, sans-serif;
+    }
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;h1&gt;Welcome to nginx!&lt;/h1&gt;
+&lt;p&gt;If you see this page, the nginx web server is successfully installed and
+working. Further configuration is required.&lt;/p&gt;
+
+&lt;p&gt;For online documentation and support please refer to
+&lt;a href=&quot;http://nginx.org/&quot;&gt;nginx.org&lt;/a&gt;.&lt;br/&gt;
+Commercial support is available at
+&lt;a href=&quot;http://nginx.com/&quot;&gt;nginx.com&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;em&gt;Thank you for using nginx.&lt;/em&gt;&lt;/p&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</div></code></code></pre>
+<p># Notes and References</p>
+<ul>
+<li><a href="https://rogerdudler.github.io/git-guide/">https://rogerdudler.github.io/git-guide/</a></li>
+<li><a href="http://therandomsecurityguy.com/openvswitch-cheat-sheet/">http://therandomsecurityguy.com/openvswitch-cheat-sheet/</a></li>
+<li><a href="https://www.cyberciti.biz/faq/howto-linux-configuring-default-route-with-ipcommand/">https://www.cyberciti.biz/faq/howto-linux-configuring-default-route-with-ipcommand/</a></li>
+<li><a href="https://www.vagrantup.com/intro/getting-started/">https://www.vagrantup.com/intro/getting-started/</a></li>
+<li><a href="https://linux.die.net/man/8/ip">https://linux.die.net/man/8/ip</a></li>
+</ul>
+<h1 id="authors-and-acknowledgment">Authors and acknowledgment</h1>
+<p>This project for the course of <strong>Design of Networks and Communication System</strong> was developed from <em>Federico Rodigari</em> and <em>Francesco Zoccatelli</em>. We started forking the repository from [dustnic/dncs-lab]. This project is powered by dustnic.</p>
+
+    </body>
+    </html>
