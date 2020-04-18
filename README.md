@@ -22,6 +22,7 @@ On this project works, as collaborators, **Federico Rodigari** and **Francesco Z
   - [Routing table](#routing-table)
   - [Reachability](#reachability)
   - [WebServer](#webserver)
+- [Notes and references](#notes-and-references)
 - [Authors and acknowledgment](#authors-and-acknowledgment)
 
 # Requirements
@@ -216,8 +217,9 @@ ip route del default #Delete the default gateway
   3. Subnet C reachable from 192.168.10.2 *(Router-2)*
 - **router-2**
   1. Set interface of the subnet *D* 192.168.10.2/30 and of the subnet *C* 192.168.6.1
-  2. Subnet A and B reachable from 192.168.10.1 *(Router-1)*
-  
+  2. NOT PRESENT
+  3. Subnet A and B reachable from 192.168.10.1 *(Router-1)*
+
 ## Switch
 ```
 #CONFIGURATIONS
@@ -279,6 +281,7 @@ We were able to display the routing tables of the components of the network via 
 This can help to show route information about directly connected and remote networks.
 
 - **host-a**
+
 | Destination |   Gateway   |     Genmask     |  Iface |
 | :---------- | :---------: | :-------------: | -----: |
 | 0.0.0.0     | 192.168.2.1 |     0.0.0.0     | enp0s8 |
@@ -287,6 +290,7 @@ This can help to show route information about directly connected and remote netw
 | 192.168.2.0 |   0.0.0.0   |  255.255.254.0  | enp0s8 |
 
 - **host-b**
+
 | Destination |   Gateway   |     Genmask     |  Iface |
 | :---------- | :---------: | :-------------: | -----: |
 | 0.0.0.0     | 192.168.4.1 |     0.0.0.0     | enp0s8 |
@@ -295,6 +299,7 @@ This can help to show route information about directly connected and remote netw
 | 192.168.4.0 |   0.0.0.0   |  255.255.255.0  | enp0s8 |
 
 - **host-c**
+
 | Destination |   Gateway   |     Genmask     |   Iface |
 | :---------- | :---------: | :-------------: | ------: |
 | 0.0.0.0     |  10.0.2.2   |     0.0.0.0     |  enp0s3 |
@@ -306,6 +311,7 @@ This can help to show route information about directly connected and remote netw
 | 192.168.6.0 |   0.0.0.0   |  255.255.254.0  |  enp0s8 |
 
 - **router-1**
+
 | Destination  |   Gateway    |     Genmask     |     Iface |
 | :----------- | :----------: | :-------------: | --------: |
 | 10.0.2.0     |   0.0.0.0    |  255.255.255.0  |    enp0s3 |
@@ -316,6 +322,7 @@ This can help to show route information about directly connected and remote netw
 | 192.168.10.0 |   0.0.0.0    | 255.255.255.252 |    enp0s9 |
 
 - **router-2**
+
 | Destination  |   Gateway    |     Genmask     |  Iface |
 | :----------- | :----------: | :-------------: | -----: |
 | 10.0.2.0     |   0.0.0.0    |  255.255.255.0  | enp0s3 |
@@ -377,7 +384,7 @@ Commercial support is available at
 </html>
 ```
 
-# Notes and References
+# Notes and references
 - https://rogerdudler.github.io/git-guide/
 - http://therandomsecurityguy.com/openvswitch-cheat-sheet/
 - https://www.cyberciti.biz/faq/howto-linux-configuring-default-route-with-ipcommand/
@@ -385,5 +392,4 @@ Commercial support is available at
 - https://linux.die.net/man/8/ip
 
 # Authors and acknowledgment
-
 This project for the course of **Design of Networks and Communication System** was developed from *Federico Rodigari* and *Francesco Zoccatelli*. We started forking the repository from [dustnic/dncs-lab]. This project is powered by dustnic.
