@@ -193,7 +193,7 @@ In this section, we will describe the code that allowed us to build our project 
 74  vb.memory = 512
 ```
 
-## ROUTERS
+## Routers
 ```
 #CONFIGURATIONS
 
@@ -218,7 +218,7 @@ ip route del default #Delete the default gateway
   1. Set interface of the subnet *D* 192.168.10.2/30 and of the subnet *C* 192.168.6.1
   2. Subnet A and B reachable from 192.168.10.1 *(Router-1)*
   
-## SWITCH
+## Switch
 ```
 #CONFIGURATIONS
 
@@ -242,7 +242,7 @@ ovs-vsctl add-port switch enp0s10 tag=10
 ip link set enp0s10 up
 ```
 
-## HOSTS
+## Hosts
 ```
 #COMMON
 export DEBIAN_FRONTEND=noninteractive
