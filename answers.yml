@@ -1,0 +1,18 @@
+FirstName: Federico
+LastName: Rodigari
+MatriculationNumber: 195500
+AcademicYear: 2019-2020
+GitHubUrl: https://github.com/KikkoR/dncs-lab
+Subnets:
+  HostsA:
+    RequiredAddresses: 380
+    SubnetAddress: 192.168.2.0
+    SubnetPrefixLength: 255.255.254.0
+  HostsB:
+    RequiredAddresses: 50
+    SubnetAddress: 192.168.4.0
+    SubnetPrefixLength: 255.255.255.0
+  Hub:
+    RequiredAddresses: 406
+    SubnetAddress: 192.168.6.0
+    SubnetPrefixLength: 255.255.254.0
